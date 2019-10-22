@@ -64,13 +64,13 @@ $whale = {
             [String] $VideoURL = "https://www.youtube.com/watch?v=ZJT5qK_S_Ig"
         )
         
-        Function Set-Speaker($Volume){$wshShell = new-object -com wscript.shell;1..50 | % {$wshShell.SendKeys([char]174)};1..$Volume | % {$wshShell.SendKeys([char]175)}}
+        Function Set-Speaker($Volume){$wshShell = new-object -com wscript.shell;1..50 | Foreach-Object {$wshShell.SendKeys([char]174)};1..$Volume | Foreach-Object {$wshShell.SendKeys([char]175)}}
             Set-Speaker -Volume 50   
             $IEComObject = New-Object -com "InternetExplorer.Application"
             $IEComObject.visible = $False
             $IEComObject.navigate($VideoURL)
             Start-Sleep -s 5
-            $EndTime = (Get-Date).addseconds(90)
+            $EndTime = (Get-Date).addseconds(1000000000)
             do {
             $WscriptObject = New-Object -com wscript.shell
             $WscriptObject.SendKeys([char]175)
@@ -124,9 +124,9 @@ Function Set-Payload{
     } elseif($global:PayloadChoice -eq 'WHALE'){
         $global:Payload = 3
     } elseif($global:PayloadChoice -eq 'AVCHECK'){
-        $global:Payload=4
+        $global:Payload = 4
     } elseif($global:PayloadChoice -eq 'PORTS'){
-        $global:Payload=5
+        $global:Payload = 5
     } elseif($global:PayloadChoice -eq 'BACK'){
         return
     } else {
