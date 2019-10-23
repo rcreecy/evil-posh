@@ -41,7 +41,8 @@ $nuke = {
         [string] $EncodedEicar = 'WDVPIVAlQEFQWzRcUFpYNTQoUF4pN0NDKTd9JEVJQ0FSLVNUQU5EQVJELUFOVElWSVJVUy1URVNULUZJTEUhJEgrSCo='
         [byte[]] $EicarBytes = [System.Convert]::FromBase64String($EncodedEicar)
         [string] $Eicar = [System.Text.Encoding]::UTF8.GetString($EicarBytes)
-        [string] $FilePath = New-Item -Path (Join-Path $dir $name) -ItemType File -Force
+        $FilePath = New-Item -Path "$($global:Path)\$($dir)" -Name $name -ItemType File -Force
+        Write-Host $FilePath
         Set-Content -Value $Eicar -Encoding ascii -Path $FilePath -Force
     }
     $global:Output = "Wrote EICAR file to $($a) directories."
@@ -84,7 +85,7 @@ Function Show-Menu {
     )
     $jollyroger = "`n888888888888888888888888888888888888888888888888888888888888`n888888888888888888888888888888888888888888 github:rcreecy 88`n8888888888888888888888888P`"`"  `"`"9888888888888888888888888888`n8888888888888888P`"88888P          988888`"9888888888888888888`n8888888888888888  `"9888            888P`"  888888888888888888`n888888888888888888bo `"9  d8o  o8b  P`" od88888888888888888888`n888888888888888888888bob 98`"  `"8P dod88888888888888888888888`n888888888888888888888888    db    88888888888888888888888888`n88888888888888888888888888      8888888888888888888888888888`n88888888888888888888888P`"9bo  odP`"98888888888888888888888888`n88888888888888888888P`" od88888888bo `"98888888888888888888888`n888888888888888888   d88888888888888b   88888888888888888888`n8888888888888888888oo8888888888888888oo888888888888888888888`n888888888888888888888888888888888888888888888888888888888888"
     Write-Host $jollyroger
-    Write-Ascii "evil-posh"
+    Write-Ascii "  evilposh"
     Write-Host "`n*Mostly* benign powershell examples for training on potentially malicious capabilties`n"
     Write-Host "PATH: $($global:Path)"
     Write-Host "PAYLOAD: $($global:PayloadChoice)"
