@@ -124,6 +124,7 @@ Function Show-Menu {
 }
 
 Function Set-Path{
+    Write-Host "PATH declaration is required by some payloads for specificity.`nAs this is intended to be a localized training tool,`nsome payloads such as NUKE are demonstrative, but can be `nheavily system impacting if not ran in a controlled method.`nRunning ENUM against a path prior to running NUKE is `nadvised to determine the number of detections that will be generated from it.`n" -ForegroundColor Blue
     $global:Path = Read-Host -Prompt "PATH"
     $PathValidation = Test-Path $global:Path
     if($PathValidation) {
@@ -137,7 +138,7 @@ Function Set-Path{
 }
 
 Function Set-Payload{
-    Write-Host `n"PAYLOAD OPTIONS:`n NUKE - Drop an EICAR file in every directory and subdirectory from base (PATH)`n WHALE - Set system volum to MAX and play Narwhales 10 hour in a hidden window`n`nTOOLS:`n AVCHECK - Check presence of current AV on system`n ENUM - List out directories and subdirectories from the base (PATH)`n PORTS - Run a check on listening ports on the machine`n`nBACK"
+    Write-Host `n"PAYLOAD OPTIONS:`n NUKE - Drop an EICAR file in every directory and subdirectory from base (PATH)`n  This can be used for experimenting with behavior blocking rule creation.`n`n WHALE - Set system volum to MAX and play Narwhales 10 hour in a hidden window`n  Effective for observing and blocking system actions and wscript behavior.`n`n`nTOOLS:`n AVCHECK - Check presence of current AV on system`n  References WMI queries for installed anti-virus products`n`n ENUM - List out directories and subdirectories from the base (PATH)`n  Run this prior to utilizing [NUKE] to determine the scope of system impact`n`n PORTS - Run a check on listening ports on the machine`n  [WORK IN PROGRESS]`n`nBACK"
     $global:PayloadChoice = Read-Host "`nCHOICE"
     if($global:PayloadChoice -eq 'ENUM'){
         $global:Payload = 1
@@ -183,6 +184,7 @@ Function Start-Payload{
 }
 
 Function Start-Bypass{
+    Write-Host "BYPASS utilizes a potential vulnerability in Microsofts FODHELPER.exe, allowing`nscripts to be executed directly from the registery with no UAC prompt,`nwhen UAC is not set to its highest configuration (Non-default).`nThis may generate detections with some AV, however, testing has shown in multiple instances`nthat a detection does not always mean it will fail.`n`nThis utility to useful for experimenting to rules designed to block priv-esc methods." -ForegroundColor Blue
     $ShellChoice = Read-Host "Launch into evil-posh? (y/n)"
     Clear-Host
     if($ShellChoice -eq 'y'){
